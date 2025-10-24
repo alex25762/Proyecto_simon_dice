@@ -4,8 +4,8 @@ self.nombre=nombre
 self.raza=raza
 
 def ladrar(self):
-print(el perro llamado {self.nombre} es muy tranquilo para ser {self.raza})
+print(f"el perro llamado {self.nombre} es muy tranquilo para ser {self.raza}")
 
 
-P1 = perro(juanito, pitbull)
-P1()
+P1 = perro("juanito", "pitbull")
+P1.ladrar
