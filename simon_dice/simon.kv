@@ -1,0 +1,75 @@
+<SimonScreen>:
+    orientation: "vertical"
+    spacing: 20
+    padding: 20
+    canvas.before:
+        Color:
+            rgba: 0.05, 0.05, 0.1, 1   # Fondo oscuro
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    # Parte superior: marcador
+    Label:
+        text: "Puntaje: 0"
+        color: 1, 1, 1, 1
+        font_size: "24sp"
+        size_hint_y: 0.1
+
+    # Zona de botones 2x2
+    GridLayout:
+        cols: 2
+        spacing: 25
+        size_hint_y: 0.8
+
+        # Botón azul
+        Button:
+            background_normal: ""
+            background_color: 0.0, 0.4, 1.0, 1
+            border: [0,0,0,0]
+            on_press: app.on_button_press('blue')
+            canvas.before:
+                Color:
+                    rgba: 0.0, 0.4, 1.0, 1
+                Ellipse:
+                    pos: self.pos
+                    size: self.size
+
+        # Botón rojo
+        Button:
+            background_normal: ""
+            background_color: 1.0, 0.2, 0.2, 1
+            border: [0,0,0,0]
+            on_press: app.on_button_press('red')
+            canvas.before:
+                Color:
+                    rgba: 1.0, 0.2, 0.2, 1
+                Ellipse:
+                    pos: self.pos
+                    size: self.size
+
+        # Botón amarillo
+        Button:
+            background_normal: ""
+            background_color: 1.0, 0.9, 0.0, 1
+            border: [0,0,0,0]
+            on_press: app.on_button_press('yellow')
+            canvas.before:
+                Color:
+                    rgba: 1.0, 0.9, 0.0, 1
+                Ellipse:
+                    pos: self.pos
+                    size: self.size
+
+        # Botón verde
+        Button:
+            background_normal: ""
+            background_color: 0.0, 0.8, 0.2, 1
+            border: [0,0,0,0]
+            on_press: app.on_button_press('green')
+            canvas.before:
+                Color:
+                    rgba: 0.0, 0.8, 0.2, 1
+                Ellipse:
+                    pos: self.pos
+                    size: self.size
