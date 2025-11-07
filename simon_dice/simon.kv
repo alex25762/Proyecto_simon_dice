@@ -1,75 +1,118 @@
+# La clase SimonScreen es el widget principal
 <SimonScreen>:
+    # Propiedades del BoxLayout (4 espacios de indentación)
     orientation: "vertical"
     spacing: 20
     padding: 20
+    
+    # El canvas define el fondo oscuro
     canvas.before:
         Color:
-            rgba: 0.05, 0.05, 0.1, 1   # Fondo oscuro
+            rgba: 0.05, 0.05, 0.1, 1 
         Rectangle:
             pos: self.pos
             size: self.size
 
-    # Parte superior: marcador
+    # Label temporal para confirmar que el KV se está leyendo correctamente
     Label:
+        text: "JUEGO INICIADO AUTOMÁTICAMENTE"
+        color: 0, 1, 0, 1
+        font_size: "16sp"
+        size_hint_y: 0.05
+        
+    # Parte superior: marcador de puntaje
+    Label:
+        id: score_label
         text: "Puntaje: 0"
         color: 1, 1, 1, 1
         font_size: "24sp"
-        size_hint_y: 0.1
-
-    # Zona de botones 2x2
+        size_hint_y: 0.05 
+        
+    # Zona de botones 2x2 (La cuadrícula del juego)
     GridLayout:
+        id: game_grid
         cols: 2
         spacing: 25
-        size_hint_y: 0.8
-
+        size_hint_y: 0.85
+        padding: 20
+        
         # Botón azul
         Button:
+            id: btn_blue
             background_normal: ""
             background_color: 0.0, 0.4, 1.0, 1
             border: [0,0,0,0]
-            on_press: app.on_button_press('blue')
+            on_press: app.root.on_button_press('blue')
             canvas.before:
                 Color:
-                    rgba: 0.0, 0.4, 1.0, 1
+                    rgba: self.background_color
                 Ellipse:
                     pos: self.pos
                     size: self.size
 
         # Botón rojo
         Button:
+            id: btn_red
             background_normal: ""
             background_color: 1.0, 0.2, 0.2, 1
             border: [0,0,0,0]
-            on_press: app.on_button_press('red')
+            on_press: app.root.on_button_press('red')
             canvas.before:
                 Color:
-                    rgba: 1.0, 0.2, 0.2, 1
+                    rgba: self.background_color
                 Ellipse:
                     pos: self.pos
                     size: self.size
 
         # Botón amarillo
         Button:
+            id: btn_yellow
             background_normal: ""
             background_color: 1.0, 0.9, 0.0, 1
             border: [0,0,0,0]
-            on_press: app.on_button_press('yellow')
+            on_press: app.root.on_button_press('yellow')
             canvas.before:
                 Color:
-                    rgba: 1.0, 0.9, 0.0, 1
+                    rgba: self.background_color
                 Ellipse:
                     pos: self.pos
                     size: self.size
 
         # Botón verde
         Button:
+            id: btn_green
             background_normal: ""
             background_color: 0.0, 0.8, 0.2, 1
             border: [0,0,0,0]
-            on_press: app.on_button_press('green')
+            on_press: app.root.on_button_press('green')
             canvas.before:
                 Color:
-                    rgba: 0.0, 0.8, 0.2, 1
+                    rgba: self.background_color
                 Ellipse:
                     pos: self.pos
                     size: self.size
+                    
+    # Capa de Game Over (Inicialmente oculta, overlay en RelativeLayout)
+    RelativeLayout:
+        id: game_over_overlay
+        size_hint: 1, 1
+        pos: self.parent.pos # Se posiciona sobre el BoxLayout
+        opacity: 0 # Inicialmente invisible
+        disabled: True # Inicialmente deshabilitado para no bloquear clics
+        
+        canvas.before:
+            # Fondo semi-transparente y oscuro
+            Color:
+                rgba: 0.0, 0.0, 0.0, root.game_over_opacity
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        Button:
+            text: 'GAME OVER\nClick para Reiniciar'
+            size_hint: 0.6, 0.3
+            pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+            font_size: '30sp'
+            background_normal: ''
+            background_color: 0.8, 0.1, 0.1, 1 # Rojo brillante
+            on_press: app.root.start_game(self) # Llama a la función de reinicio
