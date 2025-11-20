@@ -1,118 +1,372 @@
-# La clase SimonScreen es el widget principal
-<SimonScreen>:
-    # Propiedades del BoxLayout (4 espacios de indentación)
-    orientation: "vertical"
-    spacing: 20
-    padding: 20
+#interfaz 
+import flet as ft
+import time
+import asyncio
+# Importamos la lógica y las constantes
+from simon_main import SimonGame, COLORES 
+
+# Constantes de Flet para el diseño visual
+# CORRECCIÓN: Usando ft.Colors en lugar de ft.colors
+FLET_COLORS = {
+    'blue': ft.Colors.BLUE_700,
+    'red': ft.Colors.RED_700,
+    'yellow': ft.Colors.YELLOW_ACCENT_700,
+    'green': ft.Colors.GREEN_700,
+}
+FLASH_COLOR = ft.Colors.WHITE
+# Tamaño fijo, pero adaptable a la vista móvil
+GAME_AREA_SIZE = 380 
+
+class SimonFletApp:
+    def __init__(self, page: ft.Page):
+        self.page = page
+        self.page.title = "Simón Dice Móvil"
+        self.page.vertical_alignment = ft.MainAxisAlignment.CENTER # Centramos verticalmente
+        self.page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+        # CORRECCIÓN: Usando ft.Colors
+        self.page.bgcolor = ft.Colors.BLUE_GREY_900
+        # Configuración inicial para simular un móvil
+        self.page.window_height = 800
+        self.page.window_width = 450
+        self.page.padding = 0 
+        
+        self.buttons = {}
+        
+        # 1. Inicializar la lógica del juego con los callbacks
+        self.game = SimonGame(
+            on_update_score=self.update_score_ui,
+            on_game_over=self.handle_game_over_ui,
+            on_sequence_done=self.run_flash_sequence,
+        )
+        
+        # 2. Configurar la UI base (SÍNCRONO)
+        self._setup_ui()
+        
+        # 3. Iniciar la secuencia de arranque asíncrona
+        # CORRECCIÓN CLAVE: Pasar la coroutine sin ejecutar (sin paréntesis)
+        self.page.run_task(self.setup_and_start_async) 
     
-    # El canvas define el fondo oscuro
-    canvas.before:
-        Color:
-            rgba: 0.05, 0.05, 0.1, 1 
-        Rectangle:
-            pos: self.pos
-            size: self.size
-
-    # Label temporal para confirmar que el KV se está leyendo correctamente
-    Label:
-        text: "JUEGO INICIADO AUTOMÁTICAMENTE"
-        color: 0, 1, 0, 1
-        font_size: "16sp"
-        size_hint_y: 0.05
+    async def setup_and_start_async(self):
+        """
+        Inicializa la UI y comienza el juego de forma asíncrona para manejar el retardo inicial.
+        """
+        # Esperamos un poco para que la UI se renderice y esté estable
+        await asyncio.sleep(0.1) 
         
-    # Parte superior: marcador de puntaje
-    Label:
-        id: score_label
-        text: "Puntaje: 0"
-        color: 1, 1, 1, 1
-        font_size: "24sp"
-        size_hint_y: 0.05 
+        # Actualizar el círculo central de 'Cargando...' a 'Simon'
+        self.center_circle.content.value = "Simon"
+        self.page.update()
+        self.set_buttons_active(False) # Desactivar botones antes del inicio
+
+        # Retardo inicial antes de comenzar la primera ronda
+        await asyncio.sleep(1.5)
         
-    # Zona de botones 2x2 (La cuadrícula del juego)
-    GridLayout:
-        id: game_grid
-        cols: 2
-        spacing: 25
-        size_hint_y: 0.85
-        padding: 20
+        # Iniciar el juego (Ahora solo resetea el estado, ya no llama a next_round internamente)
+        self.game.start_game()
         
-        # Botón azul
-        Button:
-            id: btn_blue
-            background_normal: ""
-            background_color: 0.0, 0.4, 1.0, 1
-            border: [0,0,0,0]
-            on_press: app.root.on_button_press('blue')
-            canvas.before:
-                Color:
-                    rgba: self.background_color
-                Ellipse:
-                    pos: self.pos
-                    size: self.size
-
-        # Botón rojo
-        Button:
-            id: btn_red
-            background_normal: ""
-            background_color: 1.0, 0.2, 0.2, 1
-            border: [0,0,0,0]
-            on_press: app.root.on_button_press('red')
-            canvas.before:
-                Color:
-                    rgba: self.background_color
-                Ellipse:
-                    pos: self.pos
-                    size: self.size
-
-        # Botón amarillo
-        Button:
-            id: btn_yellow
-            background_normal: ""
-            background_color: 1.0, 0.9, 0.0, 1
-            border: [0,0,0,0]
-            on_press: app.root.on_button_press('yellow')
-            canvas.before:
-                Color:
-                    rgba: self.background_color
-                Ellipse:
-                    pos: self.pos
-                    size: self.size
-
-        # Botón verde
-        Button:
-            id: btn_green
-            background_normal: ""
-            background_color: 0.0, 0.8, 0.2, 1
-            border: [0,0,0,0]
-            on_press: app.root.on_button_press('green')
-            canvas.before:
-                Color:
-                    rgba: self.background_color
-                Ellipse:
-                    pos: self.pos
-                    size: self.size
-                    
-    # Capa de Game Over (Inicialmente oculta, overlay en RelativeLayout)
-    RelativeLayout:
-        id: game_over_overlay
-        size_hint: 1, 1
-        pos: self.parent.pos # Se posiciona sobre el BoxLayout
-        opacity: 0 # Inicialmente invisible
-        disabled: True # Inicialmente deshabilitado para no bloquear clics
+        # CORRECCIÓN: Llamar a next_round aquí asegura que la secuencia de flashes
+        # comience solo DESPUÉS de que se haya completado el retardo inicial de 1.5s.
+        self.game.next_round()
         
-        canvas.before:
-            # Fondo semi-transparente y oscuro
-            Color:
-                rgba: 0.0, 0.0, 0.0, root.game_over_opacity
-            Rectangle:
-                pos: self.pos
-                size: self.size
+    # --- Configuración de UI (Síncrona) ---
 
-        Button:
-            text: 'GAME OVER\nClick para Reiniciar'
-            size_hint: 0.6, 0.3
-            pos_hint: {'center_x': 0.5, 'center_y': 0.5}
-            font_size: '30sp'
-            background_normal: ''
-            background_color: 0.8, 0.1, 0.1, 1 # Rojo brillante
-            on_press: app.root.start_game(self) # Llama a la función de reinicio
+    def _setup_ui(self):
+        """Construye todos los elementos de la interfaz, incluyendo la barra inferior."""
+        
+        # --- Marcador de Puntaje y Récord ---
+        # CORRECCIÓN: Usando ft.Colors
+        self.score_label = ft.Text("Puntaje: 0", size=30, color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD)
+        
+        # CORRECCIÓN: Usando ft.Colors
+        self.record_value_label = ft.Text("0", size=48, color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD)
+        self.record_label = ft.Column(
+            controls=[
+                # CORRECCIÓN: ft.icons debe ser ft.Icons (con 'I' mayúscula)
+                # CORRECCIÓN: Usando ft.Colors
+                ft.Icon(ft.Icons.STAR, color=ft.Colors.AMBER_400, size=48), 
+                self.record_value_label
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=0
+        )
+
+        # Contenedor/Botón de Game Over / Reinicio
+        self.game_over_button = ft.ElevatedButton(
+            on_click=self.restart_game_click,
+            height=GAME_AREA_SIZE * 0.8,
+            width=GAME_AREA_SIZE * 0.8,
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=15),
+                # CORRECCIÓN: Usando ft.Colors
+                bgcolor={"default": ft.Colors.RED_900},
+                # CORRECCIÓN: Usando ft.Colors
+                color={"default": ft.Colors.WHITE}
+            ),
+            content=ft.Column(
+                controls=[
+                    ft.Text("¡FALLASTE!", size=28, weight=ft.FontWeight.BOLD), # El texto final se actualiza en el callback
+                    ft.Text("Click para Reiniciar", size=18)
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+        )
+        
+        # Overlay de Game Over 
+        self.game_over_overlay = ft.Container(
+            content=self.game_over_button,
+            alignment=ft.alignment.center,
+            visible=False, 
+            expand=True,
+            # CORRECCIÓN: Usando ft.Colors
+            bgcolor=ft.Colors.with_opacity(0.8, ft.Colors.BLACK),
+        )
+
+        # --- Creación de Botones de Juego (Círculos) ---
+        for color_name in COLORES:
+            btn = ft.Container(
+                width=GAME_AREA_SIZE / 2 - 10, 
+                height=GAME_AREA_SIZE / 2 - 10,
+                border_radius=ft.border_radius.all((GAME_AREA_SIZE / 2 - 10) / 2), 
+                bgcolor=FLET_COLORS[color_name],
+                data=color_name,
+                on_click=self.handle_button_click,
+                alignment=ft.alignment.center,
+                # Sombra (efecto de luz apagada)
+                shadow=ft.BoxShadow(
+                    spread_radius=-10, 
+                    blur_radius=25, 
+                    color=FLET_COLORS[color_name],
+                    offset=ft.Offset(0, 0),
+                    blur_style=ft.ShadowBlurStyle.OUTER
+                ),
+                # Usamos el argumento genérico 'animate' para animar el cambio de color
+                animate=ft.Animation(100, ft.AnimationCurve.EASE_OUT),
+            )
+            self.buttons[color_name] = btn
+        
+        button_list = list(self.buttons.values())
+        
+        # Área del juego (Cuadrícula 2x2)
+        game_grid = ft.Column(
+            controls=[
+                ft.Row(
+                    controls=[button_list[0], button_list[1]],
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    spacing=20
+                ),
+                ft.Row(
+                    controls=[button_list[2], button_list[3]],
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    spacing=20
+                )
+            ],
+            alignment=ft.MainAxisAlignment.CENTER
+        )
+
+        # Elemento central (Texto)
+        self.center_circle = ft.Container(
+            width=GAME_AREA_SIZE / 3,
+            height=GAME_AREA_SIZE / 3,
+            border_radius=ft.border_radius.all(GAME_AREA_SIZE / 6),
+            # CORRECCIÓN: Usando ft.Colors
+            bgcolor=ft.Colors.BLUE_GREY_800,
+            alignment=ft.alignment.center,
+            # CORRECCIÓN: Usando ft.Colors.WHITE70
+            content=ft.Text("Cargando...", size=20, color=ft.Colors.WHITE70, weight=ft.FontWeight.BOLD) # Mensaje de carga inicial
+        )
+
+        # La pila que superpone la cuadrícula de botones y el círculo central
+        game_area_stack = ft.Stack(
+            controls=[
+                game_grid,
+                ft.Container(
+                    content=self.center_circle,
+                    alignment=ft.alignment.center,
+                    width=GAME_AREA_SIZE,
+                    height=GAME_AREA_SIZE
+                )
+            ],
+            width=GAME_AREA_SIZE,
+            height=GAME_AREA_SIZE,
+            alignment=ft.alignment.center
+        )
+        
+        # Contenido principal de la aplicación (Sin la barra de navegación)
+        app_main_content = ft.Column(
+            controls=[
+                ft.Container(height=30), # Espacio superior
+                self.record_label,
+                ft.Container(height=40),
+                game_area_stack, 
+                ft.Container(height=40),
+                self.score_label, 
+                ft.Container(height=30), # Espacio inferior
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            expand=True
+        )
+
+        # La pila principal que superpone el contenido y el overlay de Game Over
+        main_stack = ft.Stack(
+            controls=[
+                app_main_content, 
+                self.game_over_overlay,
+            ],
+            expand=True
+        )
+        
+        self.page.add(main_stack)
+        self.page.update()
+
+    # --- Lógica Asíncrona Central (Maneja la secuencia y los retardos) ---
+    
+    async def flash_sequence_async(self, sequence, flash_duration, player_completed=False):
+        """
+        Muestra la secuencia de flashes del juego y, si no es una secuencia inicial, 
+        puede solicitar el retardo para la siguiente ronda.
+        """
+        delay_sequence_between = 0.25  # Pausa entre flashes
+        
+        self.set_buttons_active(False)  
+        
+        # Bloquear el círculo central mientras Simon está mostrando la secuencia
+        self.center_circle.content.value = "SIMON DICE"
+        self.page.update()
+
+        for color in sequence:
+            # CORRECCIÓN: Se usa await directamente ya que estamos en un async def
+            await self.flash_button_ui_async(color, flash_duration) 
+            await asyncio.sleep(delay_sequence_between) 
+
+        # Si el jugador acaba de completar una ronda, esperar 0.75s antes de la siguiente secuencia.
+        if player_completed:
+            self.center_circle.content.value = "ESPERA..."
+            self.page.update()
+            await asyncio.sleep(0.75) 
+            # Iniciar la siguiente ronda de forma síncrona, ya que estamos en una tarea asíncrona segura.
+            self.game.next_round_request()
+            return
+
+        # Restaurar el texto del círculo central y permitir la jugabilidad
+        self.center_circle.content.value = "TU TURNO"
+        self.set_buttons_active(True)
+        self.game.set_player_turn(True) 
+        self.page.update()
+
+
+    def run_flash_sequence(self, sequence, flash_duration):
+        """Callback: Lanza la secuencia de flashes al inicio de la ronda (usa run_task para Flet)."""
+        # Ya que flash_sequence_async es una coroutine, se pasa directamente al run_task.
+        # Se pasa la coroutine sin ejecutar, con sus argumentos.
+        self.page.run_task(self.flash_sequence_async, sequence, flash_duration) 
+
+    async def flash_button_ui_async(self, color_name, duration):
+        """Realiza el efecto visual para un solo botón (ASÍNCRONO)."""
+        button = self.buttons[color_name]
+        original_color = FLET_COLORS[color_name]
+        
+        # 1. Estado A: Brillante (Flash On)
+        def turn_on():
+            button.bgcolor = FLASH_COLOR  
+            button.shadow = ft.BoxShadow(
+                spread_radius=10, # Más brillo
+                blur_radius=30, 
+                color=original_color, 
+                offset=ft.Offset(0, 0), 
+                blur_style=ft.ShadowBlurStyle.OUTER
+            )
+        
+        # 2. Estado B: Original (Flash Off)
+        def turn_off():
+            button.bgcolor = original_color
+            button.shadow = ft.BoxShadow(
+                spread_radius=-10, 
+                blur_radius=25, 
+                color=original_color, 
+                offset=ft.Offset(0, 0), 
+                blur_style=ft.ShadowBlurStyle.OUTER
+            )
+        
+        # Aplicar el flash
+        turn_on()
+        self.page.update()
+        await asyncio.sleep(duration) 
+        
+        turn_off()
+        self.page.update()
+
+
+    # --- Métodos de Interfaz (Síncronos, llamados desde la lógica) ---
+
+    def set_buttons_active(self, active):
+        """Activa o desactiva la capacidad de hacer clic en los botones."""
+        for btn in self.buttons.values():
+            # Solo se activa si no está en modo Game Over
+            if not self.game_over_overlay.visible:
+                btn.disabled = not active
+        # No es necesario actualizar la página aquí, se hará en el lugar de la llamada
+
+
+    def update_score_ui(self, score_text, high_score_text):
+        """Callback: Actualiza el marcador y el récord."""
+        self.score_label.value = score_text
+        self.record_value_label.value = high_score_text
+        self.page.update()
+
+    def handle_game_over_ui(self, final_score_text):
+        """Callback: Muestra el Game Over."""
+        # Asegurarse de restaurar el texto del centro para el reinicio
+        self.center_circle.content.value = "Simon" 
+        
+        # Actualizar el texto dentro del botón de Game Over
+        game_over_column = self.game_over_button.content.controls
+        game_over_column[0].value = final_score_text # Usamos el texto final para la línea superior
+
+        self.set_buttons_active(False)
+        self.game_over_overlay.visible = True  # Mostrar el overlay
+        self.page.update()
+
+    # --- Handlers de Eventos de Flet ---
+
+    def handle_button_click(self, e: ft.ControlEvent):
+        """Manejador de clic de Flet, llama a la lógica del juego."""
+        if e.control.disabled:
+            return
+            
+        color_name = e.control.data  
+        
+        # Llama a la lógica del juego para verificar el movimiento
+        round_completed = self.game.check_player_press(color_name)
+        
+        # Retroalimentación inmediata: Flash para la pulsación del jugador
+        # Usamos run_task para lanzar la tarea asíncrona de flash.
+        # Se pasa la coroutine sin ejecutar, con sus argumentos.
+        self.page.run_task(self.flash_button_ui_async, color_name, self.game.flash_duration / 2.5) 
+        
+        # Si la ronda ha terminado con éxito, iniciar la siguiente secuencia con retardo.
+        if round_completed and not self.game_over_overlay.visible:
+            # Usamos run_task para lanzar la secuencia asíncrona de la siguiente ronda.
+            # Se pasa la coroutine sin ejecutar, con sus argumentos.
+            self.page.run_task(self.flash_sequence_async, self.game.sequence, self.game.flash_duration, True)
+
+
+    def restart_game_click(self, e):
+        """Manejador de clic del botón de Reinicio."""
+        self.game_over_overlay.visible = False # Ocultar el overlay
+        self.center_circle.content.value = "Cargando..." # Mensaje de carga antes de la espera
+        self.page.update()
+        # Llamar a la función asíncrona de inicio, la cual manejará el retardo
+        self.page.run_task(self.setup_and_start_async) # CORRECCIÓN: Sin paréntesis
+
+
+def main(page: ft.Page):
+    """Función principal que inicia la aplicación Flet."""
+    # 1. Crear la instancia de la aplicación.
+    # El constructor de SimonFletApp es responsable de llamar a setup_and_start_async
+    app = SimonFletApp(page)
+
+if __name__ == "__main__":
+    ft.app(target=main, view=ft.WEB_BROWSER)
